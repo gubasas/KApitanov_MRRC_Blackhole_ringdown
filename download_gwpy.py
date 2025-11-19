@@ -621,7 +621,21 @@ def run_stacking(events, detectors_map=None, k=2, df=1.0, max_freq=2000.0, n_boo
 	# Bootstrap stacks: for each bootstrap iteration, pick random bg segment for each event, mass-normalize and stack
 	rng = np.random.default_rng(12345)
 	boot_stats = []
+	# progress reporting: print about 20 updates across the run
+	try:
+		import sys
+	except Exception:
+		sys = None
+	progress_interval = max(1, n_boot // 20)
 	for i in range(n_boot):
+		if i % progress_interval == 0:
+			msg = f"[stacking] bootstrap iteration {i+1}/{n_boot}"
+			try:
+				print(msg)
+				if sys:
+					sys.stdout.flush()
+			except Exception:
+				pass
 		stack_i = np.zeros_like(target_freqs, dtype=float)
 		for evr in ev_results:
 			bg_ts = evr.get('bg_ts')
