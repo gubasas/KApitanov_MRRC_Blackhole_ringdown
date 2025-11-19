@@ -1,0 +1,38 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# virtualenv
+env/
+.venv/
+
+# Data and results
+results/
+*.hdf5
+*.h5
+
+# IDE/editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# pytest
+.cache/
+
+# compiled files
+*.o
+*.a
+*.out

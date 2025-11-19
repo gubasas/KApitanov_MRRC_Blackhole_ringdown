@@ -1,0 +1,6 @@
+gwpy>=2.0
+gwosc>=0.4
+numpy>=1.21
+scipy>=1.7
+matplotlib>=3.4
+tqdm
