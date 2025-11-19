@@ -1,0 +1,100 @@
+{
+  "event": "GW200112_155838",
+  "validation": {
+    "detector_confirmation": {
+      "H1": {
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      "L1": {
+        "detection_stat": 0.14141969868547508,
+        "harmonic_snrs": [
+          0.34640610135755884,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "time_window_robustness": [
+      {
+        "start": 0.01,
+        "duration": 0.05,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.01,
+        "duration": 0.09,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.01,
+        "duration": 0.12,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.02,
+        "duration": 0.05,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.02,
+        "duration": 0.09,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.02,
+        "duration": 0.12,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.03,
+        "duration": 0.05,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.03,
+        "duration": 0.09,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "start": 0.03,
+        "duration": 0.12,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      }
+    ],
+    "k_value_comparison": {
+      "k=2": {
+        "delta_f": 132.859894420693,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      "k=3": {
+        "delta_f": 88.57326294712867,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      "k=4": {
+        "delta_f": 66.4299472103465,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      }
+    },
+    "pre_merger_background": [
+      {
+        "offset": -4.0,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "offset": -3.0,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "offset": -2.0,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      },
+      {
+        "offset": -1.0,
+        "error": "Cannot find a GWOSC dataset for H1 covering [1262879926, 1262879946)"
+      }
+    ]
+  }
+}
