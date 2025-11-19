@@ -25,6 +25,8 @@ from tqdm import tqdm
 
 
 def get_event_gps(event_name: str) -> float:
+	if event_name is None:
+		raise ValueError('event_name must be provided to get_event_gps()')
 	data = event_gps(event_name)
 	# `event_gps` may return a float (GPS) or a dict with 'GPS' key.
 	if isinstance(data, (float, int)):
@@ -660,6 +662,11 @@ def cli():
 			det_map = {ev: 'H1' for ev in event_list}
 			stack_out = run_stacking(event_list, detectors_map=det_map, k=args.kvalue, n_boot=args.stack_iters, n_harmonics=args.n_harmonics)
 			print('Stacking saved, p-value:', stack_out.get('pvalue'))
+		return
+
+	# For single-event operations (validate/exact/single) require --event
+	if not args.event:
+		print('Error: --event must be provided for single-event operations. Use --do-bootstrap/--do-stack with --events for batch runs.')
 		return
 
 	print(f"Fetching and analyzing event {args.event} on detector {args.detector}")
