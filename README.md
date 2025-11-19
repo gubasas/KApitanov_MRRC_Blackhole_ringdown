@@ -84,3 +84,22 @@ Statistical caution: empirical p-values depend on the chosen background interval
 
 ---
 Minimal, reproducible research code — use responsibly.
+
+## Citations
+
+This implementation was developed as an exploratory pipeline following the Kapitanov horizon-quantization proposal. If you use this code or the results derived from it, please cite the original proposal by Fedor Kapitanov:
+
+- Kapitanov, Fedor. "Quantization of horizon frequencies of black holes and observational signatures." viXra: AI (2025). PDF: https://ai.vixra.org/pdf/2511.0009v1.pdf
+
+Suggested BibTeX:
+
+```bibtex
+@article{kapitanov2025quantization,
+	title = {Quantization of horizon frequencies of black holes and observational signatures},
+	author = {Kapitanov, Fedor},
+	year = {2025},
+	note = {viXra: AI. \url{https://ai.vixra.org/pdf/2511.0009v1.pdf}}
+}
+```
+
+If you adapt or extend this code for publication, please include a citation to the repository as well (e.g., the GitHub URL and commit hash used in your analysis).
