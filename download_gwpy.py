@@ -362,7 +362,7 @@ def choose_N_for_deltaf(sampling_rate: float, delta_f: float | None, default_df:
 	return N
 
 
-def run_validation(event_name: str, detectors=('H1', 'L1'), ringdown_starts=(0.01, 0.02, 0.03), ringdown_durations=(0.05, 0.09, 0.12), k_values=(2, 3, 4), pre_merger_offsets=(-4.0, -3.0, -2.0, -1.0), n_harmonics=10, mass_override=None):
+def run_validation(event_name: str, detectors=('H1', 'L1'), ringdown_starts=(0.01, 0.02, 0.03), ringdown_durations=(0.05, 0.09, 0.12), k_values=(2, 3, 4), pre_merger_offsets=(-4.0, -3.0, -2.0, -1.0), n_harmonics=10, mass_override=None, bandwidth_factor=0.25):
 	"""Run validation tests A. L1 confirmation, time-window robustness, k-scan, and pre-merger checks.
 
 	Saves a JSON summary to `results/validation_{event}.json`.
@@ -383,7 +383,7 @@ def run_validation(event_name: str, detectors=('H1', 'L1'), ringdown_starts=(0.0
 	det_results = {}
 	for det in detectors:
 		try:
-			res = run_exact_event(event_name, detector=det, ringdown_start=0.01, ringdown_duration=0.09, delta_f=None, n_harmonics=n_harmonics)
+			res = run_exact_event(event_name, detector=det, ringdown_start=0.01, ringdown_duration=0.09, delta_f=None, n_harmonics=n_harmonics, bandwidth_factor=bandwidth_factor)
 			det_results[det] = {'detection_stat': res.get('detection_stat'), 'harmonic_snrs': res.get('harmonic_snrs')}
 		except Exception as e:
 			det_results[det] = {'error': str(e)}
@@ -502,7 +502,12 @@ def estimate_ln_k_from_pairs(masses_solar, delta_fs):
 	return ln_k, ln_k_se
 
 
-def run_bootstrap_for_event(event_name: str, detector='H1', k=2, n_boot=500, n_harmonics=10):
+def run_bootstrap_for_event(event_name: str, detector='H1', k=2, n_boot=500, n_harmonics=10, bandwidth_factor=0.25):
+	# Backwards-compatible wrapper: accept optional bandwidth_factor forwarded to internal impl
+	return run_bootstrap_for_event_internal(event_name, detector=detector, k=k, n_boot=n_boot, n_harmonics=n_harmonics, bandwidth_factor=bandwidth_factor)
+
+
+def run_bootstrap_for_event_internal(event_name: str, detector='H1', k=2, n_boot=500, n_harmonics=10, bandwidth_factor=0.25):
 	# compute delta_f from mass map
 	default_mass_map = {
 		'GW200129_065458': 60.2,
@@ -690,7 +695,27 @@ def cli():
 	parser.add_argument('--stack-iters', type=int, default=500, help='Number of bootstrap iterations for stacking')
 	parser.add_argument('--mask-lines', action='store_true', help='Mask known instrumental line frequencies (±mask-width Hz) when computing detection')
 	parser.add_argument('--mask-width', type=float, default=5.0, help='Half-width in Hz for masking around known lines')
+	parser.add_argument('--bandwidth-factor', type=float, default=0.25, help='Fraction of Δf to use as harmonic bandwidth (e.g. 0.25 -> ±Δf/4)')
+	parser.add_argument('--fit-ln-k', type=str, default=None, help='Comma-separated mass:delta_f pairs to estimate ln(k), e.g. "60:14.5,30:29.9"')
 	args = parser.parse_args()
+
+	# If user requested to fit ln(k) from mass:delta_f pairs, handle and exit
+	if args.fit_ln_k:
+		try:
+			pairs = [p.strip() for p in args.fit_ln_k.split(',') if p.strip()]
+			masses = []
+			delta_fs = []
+			for p in pairs:
+				m, d = p.split(':')
+				masses.append(float(m))
+				delta_fs.append(float(d))
+			ln_k, ln_k_se = estimate_ln_k_from_pairs(masses, delta_fs)
+			print(f"Estimated ln(k) = {ln_k:.6g} ± {ln_k_se:.6g}")
+			print(f"Equivalent k (approx) = exp(ln_k) = {math.exp(ln_k):.6g}")
+			return
+		except Exception as e:
+			print('Failed to parse --fit-ln-k pairs or estimate ln(k):', e)
+			return
 
 	if args.delta_f is None:
 		print('Warning: --delta-f not provided. Detection will use delta_f=1.0 Hz as placeholder.')
@@ -705,7 +730,7 @@ def cli():
 			for ev in event_list:
 				for det in ('H1', 'L1'):
 					try:
-						out = run_bootstrap_for_event(ev, detector=det, k=args.kvalue, n_boot=args.bootstrap_iters, n_harmonics=args.n_harmonics)
+						out = run_bootstrap_for_event(ev, detector=det, k=args.kvalue, n_boot=args.bootstrap_iters, n_harmonics=args.n_harmonics, bandwidth_factor=args.bandwidth_factor)
 						print(f"Saved bootstrap for {ev} {det}: p={out.get('pvalue')}")
 					except Exception as e:
 						print(f"Bootstrap failed for {ev} {det}: {e}")
@@ -750,11 +775,11 @@ def cli():
 		kvals = [int(x) for x in args.k_values.split(',') if x.strip()]
 		pre_offsets = [float(x) for x in args.pre_merger_offsets.split(',') if x.strip()]
 		print(f'Running validation for {args.event} detectors={det_list} starts={starts} durations={durations} k={kvals} pre_offsets={pre_offsets}')
-		summary = run_validation(args.event, detectors=tuple(det_list), ringdown_starts=tuple(starts), ringdown_durations=tuple(durations), k_values=tuple(kvals), pre_merger_offsets=tuple(pre_offsets), n_harmonics=args.n_harmonics, mass_override=args.mass_override)
+		summary = run_validation(args.event, detectors=tuple(det_list), ringdown_starts=tuple(starts), ringdown_durations=tuple(durations), k_values=tuple(kvals), pre_merger_offsets=tuple(pre_offsets), n_harmonics=args.n_harmonics, mass_override=args.mass_override, bandwidth_factor=args.bandwidth_factor)
 		print('Validation saved:', os.path.join('results', f'validation_{args.event}.json'))
 		return
 	elif args.exact:
-		res = run_exact_event(args.event, detector=args.detector, ringdown_start=args.ringdown_start, ringdown_duration=args.ringdown_duration, delta_f=args.delta_f, f0=args.f0, n_harmonics=args.n_harmonics)
+		res = run_exact_event(args.event, detector=args.detector, ringdown_start=args.ringdown_start, ringdown_duration=args.ringdown_duration, delta_f=args.delta_f, f0=args.f0, n_harmonics=args.n_harmonics, bandwidth_factor=args.bandwidth_factor)
 	else:
 		res = run_single_event(args.event, detector=args.detector, ringdown_start=args.ringdown_start, ringdown_duration=args.ringdown_duration, delta_f=args.delta_f, f0=args.f0, n_harmonics=args.n_harmonics)
 	print('Detection statistic:', res.get('detection_stat'))
