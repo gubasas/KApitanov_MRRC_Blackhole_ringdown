@@ -666,7 +666,27 @@ def cli():
 
 	# For single-event operations (validate/exact/single) require --event
 	if not args.event:
-		print('Error: --event must be provided for single-event operations. Use --do-bootstrap/--do-stack with --events for batch runs.')
+		# If results folder contains saved example results, load the first one and print a short summary
+		results_dir = 'results'
+		if os.path.isdir(results_dir):
+			# look for any *_result.json files
+			files = sorted([f for f in os.listdir(results_dir) if f.endswith('_result.json')])
+			if len(files) > 0:
+				sample = files[0]
+				print(f"No --event provided. Showing sample result from {os.path.join(results_dir, sample)}")
+				try:
+					with open(os.path.join(results_dir, sample), 'r') as fh:
+						res = json.load(fh)
+					# print the summary
+					print('Event:', res.get('event'))
+					print('GPS:', res.get('gps'))
+					print('Detection statistic:', res.get('detection_stat'))
+					print('Harmonic SNRs:', res.get('harmonic_snrs'))
+				except Exception as e:
+					print('Failed to load sample result:', e)
+				return
+		# no sample results available; print helpful usage and exit
+		print('Error: --event must be provided for single-event operations. Use --do-bootstrap/--do-stack with --events for batch runs, or place a result JSON in results/ to view a sample when running with no args.')
 		return
 
 	print(f"Fetching and analyzing event {args.event} on detector {args.detector}")
