@@ -330,14 +330,20 @@ def run_single_event(event_name: str, detector='H1', ringdown_start=0.01, ringdo
 
 
 def compute_delta_f_from_mass(mass_solar: float, k: int) -> float:
-	# Δf = c^3 / (4*k * π * G * M)
+	# Use the formula from Kapitanov (2025):
+	# Δf = (c^3 * ln k) / (16 * π^2 * G * M)
 	# mass_solar: mass in solar masses
 	G = 6.67430e-11
 	c = 299792458.0
 	M_sun = 1.98847e30
 	M = mass_solar * M_sun
-	denom = 4.0 * k * math.pi * G * M
-	return (c ** 3) / denom
+	# protect against invalid k values
+	if k <= 1:
+		# ln(k) would be <= 0; return 0.0 to indicate no meaningful spacing
+		return 0.0
+	ln_k = math.log(float(k))
+	denom = 16.0 * (math.pi ** 2) * G * M
+	return (c ** 3) * ln_k / denom
 
 
 def run_validation(event_name: str, detectors=('H1', 'L1'), ringdown_starts=(0.01, 0.02, 0.03), ringdown_durations=(0.05, 0.09, 0.12), k_values=(2, 3, 4), pre_merger_offsets=(-4.0, -3.0, -2.0, -1.0), n_harmonics=10, mass_override=None):
