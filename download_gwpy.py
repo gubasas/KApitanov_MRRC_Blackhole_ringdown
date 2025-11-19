@@ -124,7 +124,7 @@ def detect_frequency_comb_exact(frequencies, psd, noise_psd, f0, delta_f, n_harm
 	return detection_statistic, harmonic_snrs
 
 
-def run_exact_event(event_name: str, detector='H1', ringdown_start=0.01, ringdown_duration=0.09, background_window=(1.0, 5.0), f0=0.0, delta_f=None, n_harmonics=10):
+def run_exact_event(event_name: str, detector='H1', ringdown_start=0.01, ringdown_duration=0.09, background_window=(1.0, 5.0), f0=0.0, delta_f=None, n_harmonics=10, bandwidth_factor=0.25):
 	# Implements the user's exact procedure: 90ms ringdown, 1-5s background, FFT resolution ~11.1 Hz
 	gps = get_event_gps(event_name)
 	# fetch a bit of data around event
@@ -139,9 +139,9 @@ def run_exact_event(event_name: str, detector='H1', ringdown_start=0.01, ringdow
 	ring_ts = extract_window(strain, ring_start, ring_duration)
 	ring_data = ring_ts.value
 
-	# Determine N for target frequency resolution df = 11.1 Hz -> N = fs/df
-	target_df = 11.1
-	N = int(round(sampling_rate / target_df))
+	# Determine N using the chosen delta_f so that frequency spacing resolves harmonics
+	# Keep default behaviour if delta_f is None
+	N = choose_N_for_deltaf(sampling_rate, float(delta_f) if delta_f is not None else None, default_df=11.1, bandwidth_factor=bandwidth_factor)
 	if N < 1:
 		N = len(ring_data)
 
@@ -346,6 +346,22 @@ def compute_delta_f_from_mass(mass_solar: float, k: int) -> float:
 	return (c ** 3) * ln_k / denom
 
 
+def choose_N_for_deltaf(sampling_rate: float, delta_f: float | None, default_df: float = 11.1, bandwidth_factor: float = 0.25) -> int:
+	"""Choose FFT length N so that frequency spacing df <= min(default_df, bandwidth).
+
+	bandwidth = delta_f * bandwidth_factor (e.g. 0.25 * delta_f for ±Δf/4 bands)
+	df_target = min(default_df, bandwidth)
+	N = round(sampling_rate / df_target)
+	"""
+	if delta_f is None or delta_f <= 0:
+		df_target = default_df
+	else:
+		bandwidth = delta_f * float(bandwidth_factor)
+		df_target = min(float(default_df), max(bandwidth, 1e-6))
+	N = int(max(1, round(float(sampling_rate) / float(df_target))))
+	return N
+
+
 def run_validation(event_name: str, detectors=('H1', 'L1'), ringdown_starts=(0.01, 0.02, 0.03), ringdown_durations=(0.05, 0.09, 0.12), k_values=(2, 3, 4), pre_merger_offsets=(-4.0, -3.0, -2.0, -1.0), n_harmonics=10, mass_override=None):
 	"""Run validation tests A. L1 confirmation, time-window robustness, k-scan, and pre-merger checks.
 
@@ -457,6 +473,35 @@ def bootstrap_exact_from_background(bg_ts: TimeSeries, sampling_rate: float, seg
 	return np.array(stats)
 
 
+def estimate_ln_k_from_pairs(masses_solar, delta_fs):
+	"""Fit Δf = slope * (1/M) where M is in solar masses, return ln k estimate and uncertainty.
+
+	Uses linear least squares without intercept: Δf = s' * (1/M_solar).
+	Then ln k = s' * (16 π^2 G M_sun) / c^3.
+	"""
+	x = np.array([1.0 / float(m) for m in masses_solar], dtype=float)
+	y = np.array(delta_fs, dtype=float)
+	if len(x) < 2:
+		raise ValueError('Need at least two (mass, delta_f) pairs to estimate ln k')
+	# slope via least squares without intercept
+	s_num = np.dot(x, y)
+	s_den = np.dot(x, x)
+	s_hat = float(s_num / s_den)
+	# standard error of slope
+	residuals = y - s_hat * x
+	dof = max(1, len(x) - 1)
+	sigma_hat = math.sqrt(np.sum(residuals ** 2) / dof)
+	se_s = sigma_hat / math.sqrt(s_den)
+
+	# convert slope to ln k (masses were in solar masses)
+	G = 6.67430e-11
+	c = 299792458.0
+	M_sun = 1.98847e30
+	ln_k = s_hat * (16.0 * (math.pi ** 2) * G * M_sun) / (c ** 3)
+	ln_k_se = se_s * (16.0 * (math.pi ** 2) * G * M_sun) / (c ** 3)
+	return ln_k, ln_k_se
+
+
 def run_bootstrap_for_event(event_name: str, detector='H1', k=2, n_boot=500, n_harmonics=10):
 	# compute delta_f from mass map
 	default_mass_map = {
@@ -477,7 +522,8 @@ def run_bootstrap_for_event(event_name: str, detector='H1', k=2, n_boot=500, n_h
 	bg_ts = data['bg_ts']
 
 	# N for df~11.1 Hz
-	N = int(round(sampling_rate / 11.1))
+	delta_f = compute_delta_f_from_mass(mass, k)
+	N = choose_N_for_deltaf(sampling_rate, delta_f, default_df=11.1, bandwidth_factor=0.25)
 	freqs_ring, psd_ring = compute_fft_psd_fixed_N(ring_data, sampling_rate, N, tukey_alpha=0.25)
 	freqs_bg, noise_psd_med = estimate_noise_from_background_segments(bg_ts, N, tukey_alpha=0.25)
 
